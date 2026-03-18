@@ -32,7 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AssistChip
@@ -97,6 +97,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UmaVpnCheckerApp(
     viewModel: UmaVpnViewModel = viewModel(),
@@ -145,11 +146,17 @@ fun UmaVpnCheckerApp(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = viewModel::refreshCurrentFilters,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(bottomInsetPadding)
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -159,8 +166,7 @@ fun UmaVpnCheckerApp(
                     onCountrySelected = viewModel::onCountrySelected,
                     onResultCountSelected = viewModel::onResultCountSelected,
                     onOrderBySelected = viewModel::onOrderBySelected,
-                    onSiteToggled = viewModel::onToggleSite,
-                    onRefresh = viewModel::refreshCurrentFilters
+                    onSiteToggled = viewModel::onToggleSite
                 )
             }
 
@@ -235,6 +241,7 @@ fun UmaVpnCheckerApp(
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
         }
+        } // PullToRefreshBox
     }
 }
 
@@ -244,8 +251,7 @@ private fun FilterPanel(
     onCountrySelected: (CountryOption) -> Unit,
     onResultCountSelected: (Int) -> Unit,
     onOrderBySelected: (OrderByOption) -> Unit,
-    onSiteToggled: (RequiredSite) -> Unit,
-    onRefresh: () -> Unit
+    onSiteToggled: (RequiredSite) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
@@ -289,10 +295,6 @@ private fun FilterPanel(
                                 selectedSites = uiState.selectedSites,
                                 onSiteToggled = onSiteToggled
                             )
-                            TextButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.Refresh, contentDescription = null)
-                                Text("Refresh")
-                            }
                         }
                     } else {
                         Row(
@@ -307,15 +309,11 @@ private fun FilterPanel(
                                     onOrderBySelected = onOrderBySelected
                                 )
                             }
-                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 RequiredSitesColumn(
                                     selectedSites = uiState.selectedSites,
                                     onSiteToggled = onSiteToggled
                                 )
-                                TextButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Default.Refresh, contentDescription = null)
-                                    Text("Refresh")
-                                }
                             }
                         }
                     }

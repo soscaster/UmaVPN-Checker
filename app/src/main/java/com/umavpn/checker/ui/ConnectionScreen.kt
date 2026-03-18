@@ -72,7 +72,7 @@ fun ConnectionScreen(
         }
     }
 
-    var logsExpanded by rememberSaveable { mutableStateOf(false) }
+    var logsExpanded by rememberSaveable { mutableStateOf(true) }
 
     Column(
         modifier = Modifier
