@@ -55,3 +55,26 @@ From project root:
 ```powershell
 .\gradlew.bat assembleDebug
 ```
+
+## Native OpenVPN Integration Status
+
+- The project includes an in-app OpenVPN native runtime path via JNI/NDK.
+- OpenVPN3 source is vendored under `app/src/main/cpp/vendor/openvpn3`.
+- The native bridge library is built from `app/src/main/cpp` and wired to app VPN service state updates.
+- Native build is opt-in. Enable it with:
+
+```powershell
+.\gradlew.bat :app:assembleDebug -PenableNativeOpenVpn=true
+```
+
+- To prepare Android native dependencies (OpenVPN3 integration path), run:
+
+```powershell
+.\scripts\bootstrap-openvpn-native-deps.ps1
+```
+
+Prerequisite on Windows: install Visual Studio Build Tools with C++ workload
+(`Microsoft.VisualStudio.Component.VC.Tools.x86.x64`) so vcpkg can build host tools.
+
+For production validation, follow the runtime checklist in
+`NATIVE_RUNTIME_CHECKLIST.md`.

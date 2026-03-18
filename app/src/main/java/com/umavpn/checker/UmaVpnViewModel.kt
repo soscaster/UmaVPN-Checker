@@ -9,6 +9,7 @@ import com.umavpn.checker.data.RequiredSite
 import com.umavpn.checker.data.ServerDetail
 import com.umavpn.checker.data.ServerSummary
 import com.umavpn.checker.data.UmaVpnRepository
+import java.time.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +30,7 @@ private val COUNTRY_OPTIONS = listOf(
     CountryOption("TW", "Taiwan")
 )
 
-private val RESULT_OPTIONS = listOf(5, 10, 15, 20)
+private val RESULT_OPTIONS = (1..10).toList()
 
 class UmaVpnViewModel(
     private val repository: UmaVpnRepository = UmaVpnRepository.create()
@@ -65,6 +66,10 @@ class UmaVpnViewModel(
 
     fun onOrderBySelected(order: OrderByOption) {
         _uiState.update { it.copy(orderBy = order) }
+        refreshServers()
+    }
+
+    fun refreshCurrentFilters() {
         refreshServers()
     }
 
@@ -148,10 +153,11 @@ class UmaVpnViewModel(
                 orderBy = snapshot.orderBy.apiValue,
                 sites = snapshot.selectedSites.map { it.apiValue }
             ).onSuccess { result ->
+                val sorted = sortServersByCompositeScore(result)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        servers = result,
+                        servers = sorted,
                         listError = null
                     )
                 }
@@ -195,6 +201,22 @@ class UmaVpnViewModel(
                     }
                 }
         }
+    }
+
+    private fun sortServersByCompositeScore(servers: List<ServerSummary>): List<ServerSummary> {
+        if (servers.size <= 1) return servers
+
+        // Priority is strict: speed > ping > recency.
+        // A lower speed must never outrank a higher speed.
+        return servers.sortedWith(
+            compareByDescending<ServerSummary> { it.speed }
+                .thenBy { it.duration }
+                .thenByDescending { parseTimestampEpochMillis(it.timestamp) }
+        )
+    }
+
+    private fun parseTimestampEpochMillis(raw: String): Long {
+        return runCatching { Instant.parse(raw).toEpochMilli() }.getOrDefault(0L)
     }
 }
 

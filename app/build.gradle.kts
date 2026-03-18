@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val enableNativeOpenVpn = (findProperty("enableNativeOpenVpn") as? String)?.toBoolean() ?: false
+val enableNativeOpenVpn2 = (findProperty("enableNativeOpenVpn2") as? String)?.toBoolean() ?: false
+
 android {
     namespace = "com.umavpn.checker"
     compileSdk = 36
@@ -17,6 +20,21 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+
+        if (enableNativeOpenVpn) {
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            }
+
+            externalNativeBuild {
+                cmake {
+                    cppFlags += listOf("-std=c++20", "-O2")
+                    if (enableNativeOpenVpn2) {
+                        arguments += "-DENABLE_OPVN2=ON"
+                    }
+                }
+            }
+        }
     }
 
     buildTypes {
@@ -42,6 +60,14 @@ android {
         compose = true
     }
 
+    if (enableNativeOpenVpn) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+            }
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -61,6 +87,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")

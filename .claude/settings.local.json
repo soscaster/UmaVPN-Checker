@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-debug.ps1 -EnableNativeOpenVpn -EnableNativeOpenVpn2)",
+      "Bash(grep -v \"\\\\.h$\")",
+      "Bash(adb logcat:*)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"scripts/build-install-run.ps1\" -EnableNativeOpenVpn -EnableNativeOpenVpn2)"
+    ]
+  }
+}

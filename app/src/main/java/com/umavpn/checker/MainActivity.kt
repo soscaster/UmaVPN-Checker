@@ -3,7 +3,7 @@ package com.umavpn.checker
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.umavpn.checker.ui.UmaVpnCheckerApp
+import com.umavpn.checker.ui.UmaVpnRootApp
 import com.umavpn.checker.ui.theme.UmaVpnCheckerTheme
 
 class MainActivity : ComponentActivity() {
@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             UmaVpnCheckerTheme {
-                UmaVpnCheckerApp()
+                UmaVpnRootApp()
             }
         }
     }

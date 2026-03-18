@@ -56,6 +56,12 @@ class UmaVpnRepository(
         }
     }
 
+    suspend fun fetchRawConfig(ip: String, variant: String): Result<String> {
+        return runCatching {
+            api.getServerConfig(ip = ip, variant = variant).string()
+        }
+    }
+
     companion object {
         fun create(): UmaVpnRepository {
             val logger = HttpLoggingInterceptor().apply {

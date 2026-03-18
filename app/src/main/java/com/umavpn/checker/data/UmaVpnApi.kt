@@ -3,6 +3,7 @@ package com.umavpn.checker.data
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
+import okhttp3.ResponseBody
 
 interface UmaVpnApiService {
     @GET("api/server")
@@ -17,6 +18,12 @@ interface UmaVpnApiService {
     suspend fun getServerDetail(
         @Path("ip") ip: String
     ): ApiServerDetailResponse
+
+    @GET("api/server/{ip}/config")
+    suspend fun getServerConfig(
+        @Path("ip") ip: String,
+        @Query("variant") variant: String
+    ): ResponseBody
 }
 
 data class ApiServerListResponse(
