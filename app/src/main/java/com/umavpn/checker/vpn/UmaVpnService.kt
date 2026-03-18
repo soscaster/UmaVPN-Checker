@@ -75,15 +75,33 @@ class UmaVpnService : VpnService() {
     }
 
     private fun connect(ip: String, variant: String, allowedPackages: Set<String>) {
+        val priorEngine = activeEngine
         currentIp = ip
         currentVariant = OpenVpnVariant.entries.firstOrNull { it.apiValue == variant } ?: OpenVpnVariant.CURRENT
         currentAllowedPackages = allowedPackages
         opvn3FallbackAttempted = false
         activeEngine = EngineType.NONE
         currentConfig = null
-        isDisconnecting = false
+        // Keep isDisconnecting=true while we tear down the prior session so that
+        // the old session's DISCONNECTED callback cannot call disconnect() and
+        // stop the service underneath us.
+        isDisconnecting = priorEngine != EngineType.NONE
 
         scope.launch {
+            // If switching servers while a session is active, stop it first.
+            // stopSession() is a blocking JNI call that joins the native thread.
+            if (priorEngine != EngineType.NONE) {
+                VpnRuntime.appendLog("SERVICE switching server: stopping ${priorEngine.name} first")
+                when (priorEngine) {
+                    EngineType.OPVN2 -> OpenVpn2NativeBridge.stopSession()
+                    EngineType.OPVN3 -> OpenVpnNativeBridge.stopSession()
+                    EngineType.NONE  -> Unit
+                }
+                runCatching { masterTunPfd?.close(); masterTunPfd = null }
+                runCatching { tunnel?.close(); tunnel = null }
+                isDisconnecting = false
+            }
+
             runCatching {
                 VpnRuntime.appendLog("SERVICE [OPVN2] connecting ip=$ip variant=$variant allowedApps=${allowedPackages.size}")
                 VpnRuntime.setState(VpnState.Connecting)

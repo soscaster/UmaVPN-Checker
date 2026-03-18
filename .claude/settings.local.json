@@ -4,7 +4,11 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-debug.ps1 -EnableNativeOpenVpn -EnableNativeOpenVpn2)",
       "Bash(grep -v \"\\\\.h$\")",
       "Bash(adb logcat:*)",
-      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"scripts/build-install-run.ps1\" -EnableNativeOpenVpn -EnableNativeOpenVpn2)"
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File \"scripts/build-install-run.ps1\" -EnableNativeOpenVpn -EnableNativeOpenVpn2)",
+      "Bash(grep -E \"\\(openvpn2_entry|openvpn\\\\.c$\\)\")",
+      "Bash(grep -n \"^static int$\" /c/Users/MINH/Documents/codes/UmaVPN/app/src/main/cpp/vendor/ics-openvpn/main/src/main/cpp/openvpn/src/openvpn/openvpn.c)",
+      "Bash(find /c/Users/MINH/Documents/codes/UmaVPN/app/src/main/cpp -name *Jni.cpp -o -name *jni* -type f)",
+      "Bash(ls -la /c/Users/MINH/Documents/codes/UmaVPN/app/src/main/cpp/vendor/ics-openvpn/main/src/main/cpp/openvpn/src/openvpn/*.c)"
     ]
   }
 }

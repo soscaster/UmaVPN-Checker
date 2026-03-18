@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$CommitMessage = ""
+    [string]$CommitMessage = "",
+    [switch]$EnableNativeOpenVpn,
+    [switch]$EnableNativeOpenVpn2
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,6 +10,114 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $repoRoot
+$projectName = 'UmaVPN'
+
+function Sync-DirtySubmodules {
+    param(
+        [string]$ParentCommitMessage
+    )
+
+    $gitmodulesPath = Join-Path $repoRoot '.gitmodules'
+    if (-not (Test-Path $gitmodulesPath)) {
+        return
+    }
+
+    $submodulePathLines = @()
+    try {
+        $submodulePathLines = @(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>$null)
+    }
+    catch {
+        $submodulePathLines = @()
+    }
+
+    if (-not $submodulePathLines -or $submodulePathLines.Count -eq 0) {
+        return
+    }
+
+    $configuredPaths = @()
+    foreach ($line in $submodulePathLines) {
+        $parts = $line -split '\s+', 2
+        if ($parts.Count -eq 2 -and $parts[1].Trim()) {
+            $configuredPaths += $parts[1].Trim()
+        }
+    }
+
+    if (-not $configuredPaths -or $configuredPaths.Count -eq 0) {
+        return
+    }
+
+    # Warn if repository index still has gitlink paths that are not mapped in .gitmodules.
+    $gitlinkPaths = @()
+    try {
+        $gitlinkPaths = @(git ls-files --stage | Where-Object { $_ -match '^160000\s' } | ForEach-Object { ($_ -split '\s+', 4)[3] })
+    }
+    catch {
+        $gitlinkPaths = @()
+    }
+    foreach ($gitlinkPath in $gitlinkPaths) {
+        if ($configuredPaths -notcontains $gitlinkPath) {
+            Write-Warning "Git index contains unmapped submodule path '$gitlinkPath' (missing in .gitmodules). Skipping submodule sync for it."
+        }
+    }
+
+    foreach ($subPath in $configuredPaths) {
+        $subRepoPath = Join-Path $repoRoot $subPath
+        if (-not (Test-Path $subRepoPath)) {
+            Write-Warning "Configured submodule path '$subPath' does not exist on disk. Skipping."
+            continue
+        }
+
+        Push-Location $subRepoPath
+        try {
+            $isSubRepo = (& git rev-parse --is-inside-work-tree 2>$null)
+            if ($LASTEXITCODE -ne 0 -or $isSubRepo -ne 'true') {
+                Write-Warning "Path '$subPath' is not a git working tree. Skipping."
+                continue
+            }
+
+            $subChanges = git status --porcelain
+            if (-not $subChanges) {
+                continue
+            }
+
+            $subBranch = (git branch --show-current).Trim()
+            if (-not $subBranch) {
+                git checkout -B main | Out-Null
+                $subBranch = 'main'
+            }
+
+            git add -A
+            $subCommitMessage = if ($ParentCommitMessage) {
+                "$ParentCommitMessage [submodule:$subPath]"
+            } else {
+                "chore(submodule): sync $subPath $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+            }
+
+            if ($subCommitMessage.Length -gt 72) {
+                $subCommitMessage = "chore(submodule): sync $subPath"
+            }
+
+            git commit -m "$subCommitMessage"
+
+            $remoteOrigin = git remote get-url origin 2>$null
+            if ($LASTEXITCODE -eq 0 -and $remoteOrigin) {
+                $remoteHasBranch = git ls-remote --heads origin $subBranch
+                if (-not $remoteHasBranch) {
+                    git push -u origin $subBranch
+                } else {
+                    git push origin $subBranch
+                }
+            } else {
+                Write-Warning "Submodule '$subPath' has no origin remote; skipped push."
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    Set-Location $repoRoot
+}
 
 function Get-DefaultCommitMessage {
     return "chore: automated update $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
@@ -138,7 +248,26 @@ elseif ($currentBranch -ne 'main') {
 }
 
 # Build APK first
-./gradlew.bat :app:assembleDebug
+$buildScript = Join-Path $PSScriptRoot 'build-debug.ps1'
+$buildArgs = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', $buildScript
+)
+if ($EnableNativeOpenVpn) {
+    $buildArgs += '-EnableNativeOpenVpn'
+}
+if ($EnableNativeOpenVpn2) {
+    $buildArgs += '-EnableNativeOpenVpn2'
+}
+
+& powershell @buildArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "Build failed with exit code $LASTEXITCODE"
+}
+
+# Ensure submodule changes are committed/pushed first, then root commit captures new pointers.
+Sync-DirtySubmodules -ParentCommitMessage $CommitMessage
 
 $apkPath = Join-Path $repoRoot 'app/build/outputs/apk/debug/app-debug.apk'
 if (-not (Test-Path $apkPath)) {
@@ -170,7 +299,7 @@ else {
 $origin = git remote get-url origin 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $origin) {
     $repoName = Split-Path -Leaf $repoRoot
-    gh repo create $repoName --source . --remote origin --private --description "RideTracker Android app" --confirm
+    gh repo create $repoName --source . --remote origin --private --description "UmaVPN Checker Android app" --confirm
 }
 
 # Push main
@@ -185,7 +314,7 @@ else {
 # Create a new auto-incremented release tag, e.g. v0.1.0+1, v0.1.0+2...
 $versionName = Get-AppVersionName
 $tag = Get-NextReleaseTag -VersionName $versionName
-$releaseTitle = "RideTracker $tag"
+$releaseTitle = "$projectName $tag"
 $releaseNotes = "Automated build from main on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')."
 
 gh release create $tag $apkPath --title $releaseTitle --notes $releaseNotes --target main

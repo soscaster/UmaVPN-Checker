@@ -29,5 +29,20 @@
  */
 int openvpn_main(int argc, char *argv[])
 {
+    /*
+     * Reset stale global signal state from a previous longjmp-terminated session.
+     *
+     * After disconnect, openvpn calls close_management() then openvpn_exit().
+     * __wrap_openvpn_exit intercepts via longjmp, so openvpn never reaches
+     * uninit_static() — which does not clear siginfo_static anyway.
+     *
+     * Result: siginfo_static.signal_received == SIGTERM persists into the next
+     * call. openvpn_main() assigns c.sig = &siginfo_static, then IS_SIG(&c) is
+     * immediately true in tunnel_point_to_point(), causing openvpn to exit in
+     * ~1 ms before our mgmt reader thread can connect → mgmt-connect-failed.
+     *
+     * Safe to zero here because openvpn is not running between sessions.
+     */
+    memset(&siginfo_static, 0, sizeof(siginfo_static));
     return _uma_openvpn2_main_internal_(argc, argv);
 }
