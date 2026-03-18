@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -116,7 +119,64 @@ fun SettingsScreen(
                     onCheckedChange = { checked -> onToggleApp(app.packageName, checked) }
                 )
             }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+
+            item {
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("Disclaimer", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "All VPN data is sourced from NasuVPN Checker (umavpn.top)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            item {
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Open Source Components", style = MaterialTheme.typography.titleSmall)
+                        AttributionEntry("OpenVPN3 Core", "AGPL-3.0 · OpenVPN Technologies, Inc.")
+                        AttributionEntry("ics-openvpn", "AGPL-2.0 · Arne Schwabe")
+                        AttributionEntry("MbedTLS", "Apache 2.0 · ARM")
+                        AttributionEntry("OpenSSL", "Apache 2.0 · OpenSSL Project")
+                        AttributionEntry("LZ4", "BSD 2-Clause · Yann Collet")
+                        AttributionEntry("LZO / miniLZO", "GPL-2.0 · Markus F.X.J. Oberhumer")
+                        AttributionEntry("ASIO", "Boost Software License 1.0 · Christopher Kohlhoff")
+                        AttributionEntry("{fmt}", "MIT · Victor Zverovich")
+                        AttributionEntry("Retrofit2 / OkHttp3", "Apache 2.0 · Square, Inc.")
+                        AttributionEntry("Kotlin Coroutines", "Apache 2.0 · JetBrains")
+                        AttributionEntry("Jetpack Compose / AndroidX", "Apache 2.0 · Google")
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
         }
+    }
+}
+
+@Composable
+private fun AttributionEntry(name: String, license: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+        )
+        Text(
+            text = license,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
